@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>世界时间管理器</title>
+    <style>
+        :root {
+            --primary-color: #6C5CE7;
+            --secondary-color: #A8A4FF;
+            --background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            background: var(--background);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .clock-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .clock-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .clock-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .time-display {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: var(--primary-color);
+            margin: 1rem 0;
+        }
+
+        .date-display {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .location {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .flag {
+            width: 32px;
+            height: 24px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .add-timezone {
+            display: flex;
+            gap: 1rem;
+            max-width: 500px;
+            margin: 2rem auto;
+        }
+
+        select, button {
+            padding: 0.8rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        select {
+            flex: 1;
+            background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(108,92,231,0.2);
+        }
+
+        button:hover {
+            background: #5B4BC4;
+            transform: translateY(-2px);
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #ff4757;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .clock-card:hover .delete-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>世界时钟 🌍</h1>
+            <div class="add-timezone">
+                <select id="timezoneSelect">
+                    <option value="">选择时区...</option>
+                    <option value="Asia/Shanghai">中国上海</option>
+                    <option value="America/New_York">美国纽约</option>
+                    <option value="Europe/London">英国伦敦</option>
+                    <option value="Asia/Tokyo">日本东京</option>
+                    <option value="Australia/Sydney">澳大利亚悉尼</option>
+                </select>
+                <button onclick="addTimezone()">添加时钟 ➕</button>
+            </div>
+        </div>
+        <div class="clock-container" id="clockContainer"></div>
+    </div>
+
+    <script>
+        let timezones = [];
+
+        function updateClocks() {
+            const now = new Date();
+            
+            document.querySelectorAll('.clock-card').forEach((card, index) => {
+                const options = {
+                    timeZone: timezones[index],
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                };
+                
+                const time = now.toLocaleTimeString('zh-CN', options);
+                const dateOptions = { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    timeZone: timezones[index]
+                };
+                const date = now.toLocaleDateString('zh-CN', dateOptions);
+                
+                card.querySelector('.time-display').textContent = time;
+                card.querySelector('.date-display').textContent = date;
+            });
+        }
+
+        function addTimezone() {
+            const select = document.getElementById('timezoneSelect');
+            const timezone = select.value;
+            
+            if (timezone && !timezones.includes(timezone)) {
+                timezones.push(timezone);
+                
+                const card = document.createElement('div');
+                card.className = 'clock-card';
+                card.innerHTML = `
+                    <div class="location">
+                        <img src="https://flagcdn.com/${getCountryCode(timezone)}.svg" class="flag">
+                        <h3>${getLocationName(timezone)}</h3>
+                    </div>
+                    <div class="time-display">00:00:00</div>
+                    <div class="date-display">正在加载...</div>
+                    <div class="delete-btn" onclick="removeTimezone('${timezone}')">×</div>
+                `;
+                
+                document.getElementById('clockContainer').appendChild(card);
+                select.value = '';
+            }
+        }
+
+        function removeTimezone(timezone) {
+            timezones = timezones.filter(tz => tz !== timezone);
+            document.getElementById('clockContainer').innerHTML = '';
+            timezones.forEach(tz => addTimezone(tz));
+        }
+
+        function getCountryCode(timezone) {
+            const countryMap = {
+                'Asia/Shanghai': 'cn',
+                'America/New_York': 'us',
+                'Europe/London': 'gb',
+                'Asia/Tokyo': 'jp',
+                'Australia/Sydney': 'au'
+            };
+            return countryMap[timezone] || 'un';
+        }
+
+        function getLocationName(timezone) {
+            const names = {
+                'Asia/Shanghai': '中国，上海',
+                'America/New_York': '美国，纽约',
+                'Europe/London': '英国，伦敦',
+                'Asia/Tokyo': '日本，东京',
+                'Australia/Sydney': '澳大利亚，悉尼'
+            };
+            return names[timezone] || timezone.split('/')[1];
+        }
+
+        // 初始化更新时间
+        setInterval(updateClocks, 1000);
+        updateClocks();
+    </script>
+</body>
+</html>
